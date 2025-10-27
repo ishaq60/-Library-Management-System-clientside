@@ -1,12 +1,27 @@
 import { createBrowserRouter } from "react-router-dom";
 import Home from "../components/Home";
 import Root from "../root/Root";
+import Addbooks from "@/components/Addbooks";
+import Books from "@/components/Books";
+import Booksummary from "@/components/Booksummary";
 const router = createBrowserRouter([
     {
         path: "/",
         Component: Root,
         children: [
             { index: true, Component: Home },
+            {
+                path: "/books",
+                Component: Books
+            },
+            {
+                path: "/create-book",
+                Component: Addbooks
+            },
+            {
+                path: "/borrow-summary",
+                Component: Booksummary
+            }
             //   { path: "about", Component: About },
             //   {
             //     path: "auth",
