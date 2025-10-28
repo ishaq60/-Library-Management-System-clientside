@@ -1,15 +1,9 @@
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { Button } from "./ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
 import { BookMarked, Edit2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
@@ -20,24 +14,85 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
-import { useGetBooksQuery } from "@/redux/Api/baseApi";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  useDeleteBookMutation,
+  useGetBooksQuery,
+  useUpdateBookMutation,
+} from "@/redux/Api/baseApi";
+import { Textarea } from "./ui/textarea";
 
 const Books = () => {
   const [editingBook, setEditingBook] = useState(null);
   const [deletingBook, setDeletingBook] = useState(null);
+
   const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
-  console.log({ books, isLoading, isError });
+  const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
+  const [deleteBook, { isLoading: isDeleting }] = useDeleteBookMutation();
+
+  const { register, handleSubmit, reset } = useForm();
+
+  useEffect(() => {
+    if (editingBook) reset(editingBook);
+  }, [editingBook, reset]);
 
   const handleEdit = (book) => setEditingBook(book);
-  const handleDelete = (book) => setDeletingBook(book);
-  const handleConfirmDelete = () => {
-    console.log("Deleting:", deletingBook);
-    setDeletingBook(null);
-  };
+  const handleDeleteConfirm = (book) => setDeletingBook(book);
   const handleCloseDialogs = () => {
     setEditingBook(null);
     setDeletingBook(null);
   };
+
+  const onSubmit = async (formData) => {
+    formData.copies = parseInt(formData.copies);
+
+    try {
+      const response = await updateBook({
+        id: editingBook._id,
+        ...formData,
+      }).unwrap();
+
+      toast({
+        title: "✅ Book updated successfully!",
+        description: `${response?.data?.title || "Book"} has been updated.`,
+      });
+
+      setEditingBook(null);
+    } catch (err) {
+      toast({
+        title: "❌ Failed to update book",
+        description: err?.data?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteBook(id).unwrap();
+      toast({
+        title: "🗑️ Book deleted successfully!",
+        description: "The book has been removed from the library.",
+      });
+      setDeletingBook(null);
+    } catch (err) {
+      toast({
+        title: "❌ Failed to delete book",
+        description: err?.data?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) return <p>Loading books...</p>;
+  if (isError) return <p>Error loading books.</p>;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -63,116 +118,105 @@ const Books = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4">
-                    Loading books...
+              {books?.data?.map((book) => (
+                <TableRow key={book._id}>
+                  <TableCell className="font-medium">{book.title}</TableCell>
+                  <TableCell>{book.author}</TableCell>
+                  <TableCell>{book.genre}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {book.isbn}
                   </TableCell>
-                </TableRow>
-              )}
-
-              {isError && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-red-500 py-4">
-                    Failed to load books.
+                  <TableCell>{book.copies}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded text-sm font-medium ${
+                        book.available
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {book.available ? "Available" : "Unavailable"}
+                    </span>
                   </TableCell>
-                </TableRow>
-              )}
-
-              {!isLoading &&
-                !isError &&
-                books?.data?.length > 0 &&
-                books.data.map((book) => (
-                  <TableRow key={book._id}>
-                    <TableCell className="font-medium">{book.title}</TableCell>
-                    <TableCell>{book.author}</TableCell>
-                    <TableCell>{book.genre}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {book.isbn}
-                    </TableCell>
-                    <TableCell>{book.copies}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded text-sm font-medium ${
-                          book.available
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleEdit(book)}
+                        size="sm"
+                        variant="outline"
+                        className="w-8 h-8 p-0"
                       >
-                        {book.available ? "Available" : "Unavailable"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleEdit(book)}
-                          size="sm"
-                          variant="outline"
-                          className="w-8 h-8 p-0"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(book)}
-                          size="sm"
-                          variant="outline"
-                          className="w-8 h-8 p-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!book.available}
-                          className="w-8 h-8 p-0"
-                        >
-                          <BookMarked className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteConfirm(book)}
+                        size="sm"
+                        variant="outline"
+                        className="w-8 h-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!book.available}
+                        className="w-8 h-8 p-0"
+                      >
+                        <BookMarked className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
       </main>
 
+      {/* ✏️ Edit Dialog */}
       <Dialog open={!!editingBook} onOpenChange={handleCloseDialogs}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Book</DialogTitle>
           </DialogHeader>
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" required />
+              <Input {...register("title")} id="title" required />
             </div>
             <div>
               <Label htmlFor="author">Author</Label>
-              <Input id="author" name="author" required />
+              <Input {...register("author")} id="author" required />
             </div>
             <div>
               <Label htmlFor="genre">Genre</Label>
-              <Input id="genre" name="genre" required />
+              <Input {...register("genre")} id="genre" required />
             </div>
             <div>
               <Label htmlFor="isbn">ISBN</Label>
-              <Input id="isbn" name="isbn" required />
+              <Input {...register("isbn")} id="isbn" required />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" {...register("description")} rows={4} />
             </div>
             <div>
               <Label htmlFor="copies">Copies</Label>
-              <Input id="copies" name="copies" type="number" required />
+              <Input {...register("copies")} id="copies" type="number" required />
             </div>
             <DialogFooter>
               <Button onClick={handleCloseDialogs} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* 🗑️ Delete Dialog */}
       <Dialog open={!!deletingBook} onOpenChange={handleCloseDialogs}>
         <DialogContent>
           <DialogHeader>
@@ -187,8 +231,12 @@ const Books = () => {
             <Button onClick={handleCloseDialogs} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleConfirmDelete} variant="destructive">
-              Delete
+            <Button
+              onClick={() => handleDelete(deletingBook._id)}
+              variant="destructive"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
