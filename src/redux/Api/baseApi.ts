@@ -9,8 +9,16 @@ export const baseApi = createApi({
       query: () => '/books',
   
     }),
+    createBook: builder.mutation({
+      query: (bookData) => ({
+        url:"/books",
+        method:"POST",
+        body:bookData
+      })
+  
+    }),
   }),
 });
 
 // Export the auto-generated hook
-export const { useGetBooksQuery } = baseApi;
+export const { useGetBooksQuery,useCreateBookMutation } = baseApi;

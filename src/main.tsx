@@ -4,6 +4,7 @@ import router from "./route/route";
 import  "./index.css"
 import { Provider } from "react-redux";
 import { store } from "./redux/Api/store";
+import { Toaster } from "./components/ui/toaster";
 const root = document.getElementById("root");
 
 if (!root) {
@@ -12,6 +13,10 @@ if (!root) {
 
 ReactDOM.createRoot(root).render(
   <Provider store={store}>
-  <RouterProvider router={router} />
+    <>
+      <RouterProvider router={router} />
+      <Toaster /> {/* ✅ global toast container */}
+    </>
   </Provider>
 );
+
