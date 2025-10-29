@@ -7,22 +7,29 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useCreateBookMutation } from "@/redux/Api/baseApi";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 
 const Addbooks = () => {
   const [createBook, { data, isError, isLoading, isSuccess, error }] =
     useCreateBookMutation();
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: { available: "true" }, // Set default to 'true' for the select
+  });
 
   const onSubmit = async (formData) => {
     formData.copies = parseInt(formData.copies);
     formData.available = formData.available === "true";
+    if (formData.available === "") {
+      formData.available = true; // Default to true if not explicitly set
+    }
 
     try {
      const response= await createBook(formData).unwrap(); // unwrap() to handle success/error properly
@@ -31,7 +38,8 @@ const Addbooks = () => {
         title: "✅ Book Added Successfully!",
         description: `${response?.data?.title || "New Book"} has been created.`,
       });
-reset()
+     reset();
+     navigate("/books"); // Redirect to book list
     } catch (err) {
       console.error("Failed to create book:", err);
        toast({
@@ -139,10 +147,9 @@ reset()
                 <Label htmlFor="available">Available *</Label>
                 <select
                   id="available"
-                  {...register("available", )}
+                  {...register("available")}
                   className="border border-gray-300 rounded-md p-2 w-full"
                 >
-                  <option value="">Select status</option>
                   <option value="true">True</option>
                   <option value="false">False</option>
                 </select>

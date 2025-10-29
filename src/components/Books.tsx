@@ -23,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+ 
+  useCreateBorrowMutation,
   useDeleteBookMutation,
   useGetBooksQuery,
   useUpdateBookMutation,
@@ -32,6 +34,7 @@ import { Textarea } from "./ui/textarea";
 const Books = () => {
   const [editingBook, setEditingBook] = useState(null);
   const [deletingBook, setDeletingBook] = useState(null);
+  const [borrowingBook, setBorrowingBook] = useState(null); 
 
   const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
   const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
@@ -39,29 +42,95 @@ const Books = () => {
 
   const { register, handleSubmit, reset } = useForm();
 
+ 
+  const [borrowQuantity, setBorrowQuantity] = useState(1);
+  const [borrowDueDate, setBorrowDueDate] = useState("");
+  const [borrowError, setBorrowError] = useState("");
+  const [ createBorrow]=useCreateBorrowMutation()
+
   useEffect(() => {
     if (editingBook) reset(editingBook);
   }, [editingBook, reset]);
 
   const handleEdit = (book) => setEditingBook(book);
   const handleDeleteConfirm = (book) => setDeletingBook(book);
+  const handleBorrow = (book) => {
+    setBorrowingBook(book);
+    setBorrowQuantity(1);
+    setBorrowDueDate("");
+    setBorrowError("");
+  };
+
   const handleCloseDialogs = () => {
     setEditingBook(null);
     setDeletingBook(null);
+    setBorrowingBook(null);
   };
+
+
+const handleBorrowSave = async (e) => {
+  e.preventDefault();
+  setBorrowError("");
+
+  if (borrowQuantity <= 0)
+    return setBorrowError("Quantity must be greater than 0");
+  if (borrowQuantity > borrowingBook.copies)
+    return setBorrowError(`Only ${borrowingBook.copies} copies available`);
+  if (!borrowDueDate)
+    return setBorrowError("Please select a due date");
+
+  try {
+    const borrowPayload = {
+      book: borrowingBook._id,  // must be "book"
+      quantity: borrowQuantity,  // flat
+      dueDate: borrowDueDate,    // flat
+    };
+
+    console.log("📦 Sending to backend:", borrowPayload);
+
+    await createBorrow(borrowPayload).unwrap();
+
+    const updatedCopies = borrowingBook.copies - borrowQuantity;
+    const available = updatedCopies > 0;
+
+    await updateBook({
+      id: borrowingBook._id,
+      copies: updatedCopies,
+      available,
+    }).unwrap();
+
+    toast({
+      title: "📘 Book Borrowed Successfully!",
+      description: `${borrowingBook.title} borrowed until ${borrowDueDate}`,
+    });
+
+    setBorrowingBook(null);
+  } catch (err) {
+    console.error("❌ Borrow failed:", err);
+    toast({
+      title: "❌ Failed to borrow book",
+      description: err?.data?.message || "Something went wrong",
+      variant: "destructive",
+    });
+  }
+};
+
+
+
+
+
 
   const onSubmit = async (formData) => {
     formData.copies = parseInt(formData.copies);
-
     try {
-      const response = await updateBook({
+      await updateBook({
         id: editingBook._id,
         ...formData,
       }).unwrap();
 
       toast({
         title: "✅ Book updated successfully!",
-        description: `${response?.data?.title || "Book"} has been updated.`,
+        description: `${formData.title} has been updated.`,
       });
 
       setEditingBook(null);
@@ -74,6 +143,7 @@ const Books = () => {
     }
   };
 
+  // ✅ Delete Logic
   const handleDelete = async (id) => {
     try {
       await deleteBook(id).unwrap();
@@ -119,8 +189,14 @@ const Books = () => {
             </TableHeader>
             <TableBody>
               {books?.data?.map((book) => (
+             
+             <Link to={`/books/${book._id}`}>
                 <TableRow key={book._id}>
-                  <TableCell className="font-medium">{book.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link to={`/books/${book._id}`} className="hover:underline">
+                      {book.title}
+                    </Link>
+                  </TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell>{book.genre}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -157,6 +233,7 @@ const Books = () => {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                       <Button
+                        onClick={() => handleBorrow(book)}
                         size="sm"
                         variant="outline"
                         disabled={!book.available}
@@ -167,6 +244,10 @@ const Books = () => {
                     </div>
                   </TableCell>
                 </TableRow>
+             </Link>
+             
+               
+          
               ))}
             </TableBody>
           </Table>
@@ -239,6 +320,59 @@ const Books = () => {
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 📘 Borrow Dialog (Same Page) */}
+      <Dialog open={!!borrowingBook} onOpenChange={handleCloseDialogs}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Borrow Book</DialogTitle>
+               <DialogDescription>
+            Please enter the quantity and due date to borrow this book.
+          </DialogDescription>
+          </DialogHeader>
+          {borrowingBook && (
+            <form onSubmit={handleBorrowSave} className="space-y-4">
+              <div>
+                <p className="font-medium">{borrowingBook.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  Available copies: {borrowingBook.copies}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  max={borrowingBook.copies}
+                  value={borrowQuantity}
+                  onChange={(e) =>
+                    setBorrowQuantity(Number.parseInt(e.target.value) || 1)
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={borrowDueDate}
+                  onChange={(e) => setBorrowDueDate(e.target.value)}
+                  required
+                />
+              </div>
+              {borrowError && <p className="text-sm text-red-600">{borrowError}</p>}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialogs}>
+                  Cancel
+                </Button>
+                <Button type="submit">Borrow</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

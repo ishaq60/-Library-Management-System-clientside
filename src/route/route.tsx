@@ -5,6 +5,7 @@ import Root from "../root/Root";
 import Addbooks from "@/components/Addbooks";
 import Books from "@/components/Books";
 import Booksummary from "@/components/Booksummary";
+import BookDetails from "@/components/BookDetails";
 
 
 
@@ -26,6 +27,10 @@ Component:Books
       {
         path:"/borrow-summary",
         Component:Booksummary
+      },
+      {
+        path: "/books/:id",
+        Component: BookDetails,
       }
     //   { path: "about", Component: About },
     //   {

@@ -19,7 +19,7 @@ export const baseApi = createApi({
       invalidatesTags: ['Books'],
     }),
 
-    // ✅ lowercase endpoint name
+   
     updateBook: builder.mutation({
       query: ({ id, ...updateData }) => ({
         url: `/books/${id}`,
@@ -33,8 +33,26 @@ export const baseApi = createApi({
     url: `/books/${id}`,
     method: "DELETE",
   }),
-  invalidatesTags: ["Books"], // auto-refresh book list
+  invalidatesTags: ["Books"], 
 }),
+ getBorrow: builder.query({
+      query: () => '/borrow',
+      providesTags: ['Books'],
+    }),
+
+createBorrow: builder.mutation({
+  query: (borrowData) => ({
+    url: "/borrow",
+    method: "POST",
+    body: borrowData, // direct JSON: { book, quantity, dueDate }
+  }),
+  invalidatesTags: ["Books"],
+}),
+    getBookById: builder.query({
+      query: (id) => `/books/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Books', id }],
+    }),
+
 
   }),
   
@@ -42,7 +60,11 @@ export const baseApi = createApi({
 
 export const {
   useGetBooksQuery,
+    useGetBorrowQuery,
   useCreateBookMutation,
   useUpdateBookMutation,
-  useDeleteBookMutation
+  useDeleteBookMutation,
+  useCreateBorrowMutation,
+  useGetBookByIdQuery
+
 } = baseApi;
