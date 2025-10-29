@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const baseApi = createApi({
   reducerPath: 'baseApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'baseUrl:import.meta.env.VITE_API_BASE_URL'}),
+  baseQuery: fetchBaseQuery({ baseUrl: 'https://library-management-system-five-sable.vercel.app/api' }),
   tagTypes: ['Books'],
   endpoints: (builder) => ({
     getBooks: builder.query({
@@ -48,10 +48,7 @@ createBorrow: builder.mutation({
   }),
   invalidatesTags: ["Books"],
 }),
-    getBookById: builder.query({
-      query: (id) => `/books/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Books', id }],
-    }),
+
 
 
   }),
@@ -64,7 +61,6 @@ export const {
   useCreateBookMutation,
   useUpdateBookMutation,
   useDeleteBookMutation,
-  useCreateBorrowMutation,
-  useGetBookByIdQuery
+  useCreateBorrowMutation
 
 } = baseApi;
