@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useGetBookByIdQuery } from "@/redux/Api/baseApi";
+import { useGetBookByIdQuery } from "../redux/Api/baseApi";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 

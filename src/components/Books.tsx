@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { BookMarked, Edit2, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -40,6 +40,7 @@ const Books = () => {
   const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
   const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
   const [deleteBook, { isLoading: isDeleting }] = useDeleteBookMutation();
+  const navigate = useNavigate();
 
   const { register, handleSubmit, reset } = useForm<Book>();
 
@@ -193,11 +194,13 @@ const handleBorrowSave = async (e: React.FormEvent) => {
             </TableHeader>
             <TableBody>
               {books?.data?.map((book: Book) => (
-                <TableRow key={book._id}>
+                <TableRow
+                  key={book._id}
+                  className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={() => navigate(`/books/${book._id}`)}
+                >
                   <TableCell className="font-medium">
-                    <Link to={`/books/${book._id}`} className="hover:underline">
-                      {book.title}
-                    </Link>
+                    {book.title}
                   </TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell>{book.genre}</TableCell>
@@ -216,7 +219,9 @@ const handleBorrowSave = async (e: React.FormEvent) => {
                       {book.available ? "Available" : "Unavailable"}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell
+                    onClick={(e) => e.stopPropagation()} // Prevent row click when action buttons are clicked
+                  >
                     <div className="flex gap-2">
                       <Button
                         onClick={() => handleEdit(book)}
