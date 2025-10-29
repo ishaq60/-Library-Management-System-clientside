@@ -30,19 +30,20 @@ import {
   useUpdateBookMutation,
 } from "@/redux/Api/baseApi";
 import { Textarea } from "./ui/textarea";
+import { Book } from "@/types/book";
 
 const Books = () => {
-  const [editingBook, setEditingBook] = useState(null);
-  const [deletingBook, setDeletingBook] = useState(null);
-  const [borrowingBook, setBorrowingBook] = useState(null); 
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const [deletingBook, setDeletingBook] = useState<Book | null>(null);
+  const [borrowingBook, setBorrowingBook] = useState<Book | null>(null); 
 
   const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
   const [updateBook, { isLoading: isUpdating }] = useUpdateBookMutation();
   const [deleteBook, { isLoading: isDeleting }] = useDeleteBookMutation();
 
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset } = useForm<Book>();
 
- 
+  // 📘 Borrow State
   const [borrowQuantity, setBorrowQuantity] = useState(1);
   const [borrowDueDate, setBorrowDueDate] = useState("");
   const [borrowError, setBorrowError] = useState("");
@@ -52,9 +53,9 @@ const Books = () => {
     if (editingBook) reset(editingBook);
   }, [editingBook, reset]);
 
-  const handleEdit = (book) => setEditingBook(book);
-  const handleDeleteConfirm = (book) => setDeletingBook(book);
-  const handleBorrow = (book) => {
+  const handleEdit = (book: Book) => setEditingBook(book);
+  const handleDeleteConfirm = (book: Book) => setDeletingBook(book);
+  const handleBorrow = (book: Book) => {
     setBorrowingBook(book);
     setBorrowQuantity(1);
     setBorrowDueDate("");
@@ -68,9 +69,11 @@ const Books = () => {
   };
 
 
-const handleBorrowSave = async (e) => {
+const handleBorrowSave = async (e: React.FormEvent) => {
   e.preventDefault();
   setBorrowError("");
+
+  if (!borrowingBook) return; 
 
   if (borrowQuantity <= 0)
     return setBorrowError("Quantity must be greater than 0");
@@ -105,7 +108,7 @@ const handleBorrowSave = async (e) => {
     });
 
     setBorrowingBook(null);
-  } catch (err) {
+  } catch (err: any) {
     console.error("❌ Borrow failed:", err);
     toast({
       title: "❌ Failed to borrow book",
@@ -120,21 +123,22 @@ const handleBorrowSave = async (e) => {
 
 
 
-  const onSubmit = async (formData) => {
-    formData.copies = parseInt(formData.copies);
+  const onSubmit = async (formData: Book) => {
+    formData.copies = parseInt(formData.copies as any);
     try {
+      if (!editingBook) return; // Should not happen
       await updateBook({
         id: editingBook._id,
         ...formData,
       }).unwrap();
 
       toast({
-        title: "✅ Book updated successfully!",
+        title: " Book updated successfully!",
         description: `${formData.title} has been updated.`,
       });
 
       setEditingBook(null);
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "❌ Failed to update book",
         description: err?.data?.message || "Something went wrong",
@@ -143,8 +147,8 @@ const handleBorrowSave = async (e) => {
     }
   };
 
-  // ✅ Delete Logic
-  const handleDelete = async (id) => {
+
+  const handleDelete = async (id: string) => {
     try {
       await deleteBook(id).unwrap();
       toast({
@@ -152,7 +156,7 @@ const handleBorrowSave = async (e) => {
         description: "The book has been removed from the library.",
       });
       setDeletingBook(null);
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "❌ Failed to delete book",
         description: err?.data?.message || "Something went wrong",
@@ -188,9 +192,7 @@ const handleBorrowSave = async (e) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {books?.data?.map((book) => (
-             
-             <Link to={`/books/${book._id}`}>
+              {books?.data?.map((book: Book) => (
                 <TableRow key={book._id}>
                   <TableCell className="font-medium">
                     <Link to={`/books/${book._id}`} className="hover:underline">
@@ -244,10 +246,6 @@ const handleBorrowSave = async (e) => {
                     </div>
                   </TableCell>
                 </TableRow>
-             </Link>
-             
-               
-          
               ))}
             </TableBody>
           </Table>
@@ -313,7 +311,7 @@ const handleBorrowSave = async (e) => {
               Cancel
             </Button>
             <Button
-              onClick={() => handleDelete(deletingBook._id)}
+              onClick={() => deletingBook && handleDelete(deletingBook._id)}
               variant="destructive"
               disabled={isDeleting}
             >
@@ -335,9 +333,9 @@ const handleBorrowSave = async (e) => {
           {borrowingBook && (
             <form onSubmit={handleBorrowSave} className="space-y-4">
               <div>
-                <p className="font-medium">{borrowingBook.title}</p>
+                <p className="font-medium">{borrowingBook!.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  Available copies: {borrowingBook.copies}
+                  Available copies: {borrowingBook!.copies}
                 </p>
               </div>
               <div>
@@ -346,7 +344,7 @@ const handleBorrowSave = async (e) => {
                   id="quantity"
                   type="number"
                   min="1"
-                  max={borrowingBook.copies}
+                  max={borrowingBook!.copies}
                   value={borrowQuantity}
                   onChange={(e) =>
                     setBorrowQuantity(Number.parseInt(e.target.value) || 1)

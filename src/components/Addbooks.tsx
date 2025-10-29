@@ -8,11 +8,21 @@ import { Textarea } from "./ui/textarea";
 import { useCreateBookMutation } from "@/redux/Api/baseApi";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Book } from "@/types/book";
 
+
+interface AddBookFormData {
+  title: string;
+  author: string;
+  genre: string;
+  isbn: string;
+  description?: string;
+  copies: number;
+  available: "true" | "false";
+}
 
 const Addbooks = () => {
-  const [createBook, { data, isError, isLoading, isSuccess, error }] =
-    useCreateBookMutation();
+  const [createBook] = useCreateBookMutation();
   const navigate = useNavigate();
 
   const {
@@ -20,33 +30,33 @@ const Addbooks = () => {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
-    defaultValues: { available: "true" }, // Set default to 'true' for the select
+  } = useForm<AddBookFormData>({
+    defaultValues: { available: "true", copies: 1 },
   });
 
-  const onSubmit = async (formData) => {
-    formData.copies = parseInt(formData.copies);
-    formData.available = formData.available === "true";
-    if (formData.available === "") {
-      formData.available = true; // Default to true if not explicitly set
-    }
+  const onSubmit = async (formData: AddBookFormData) => {
+    const bookData: Partial<Book> = {
+      ...formData,
+      copies: parseInt(formData.copies as any),
+      available: formData.available === "true",
+    };
 
     try {
-     const response= await createBook(formData).unwrap(); // unwrap() to handle success/error properly
-      console.log(response?.data)
-     toast({
+      const response = await createBook(bookData as Book).unwrap();
+      console.log(response?.data);
+      toast({
         title: "✅ Book Added Successfully!",
         description: `${response?.data?.title || "New Book"} has been created.`,
       });
-     reset();
-     navigate("/books"); // Redirect to book list
-    } catch (err) {
+      reset();
+      navigate("/books");
+    } catch (err: any) {
       console.error("Failed to create book:", err);
-       toast({
-    title: "❌ Failed to add book",
-    description: err?.data?.message || "Something went wrong",
-    variant: "destructive",
-  });
+      toast({
+        title: "❌ Failed to add book",
+        description: err?.data?.message || "Something went wrong",
+        variant: "destructive",
+      });
     }
   };
 
@@ -121,6 +131,11 @@ const Addbooks = () => {
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" {...register("description")} rows={4} />
+                {errors.description && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.description.message}
+                  </p>
+                )}
               </div>
 
               {/* Copies */}

@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useGetBorrowQuery } from "@/redux/Api/baseApi";
+import { BorrowedBookSummary } from "@/types/book";
 
 
 const Booksummary = () => {
@@ -32,7 +33,7 @@ console.log(borrow)
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {borrow.map((bor, idx) => (
+                {borrow.map((bor: BorrowedBookSummary, idx: number) => (
                   <TableRow key={idx}>
                     <TableCell className="font-medium">{bor?.book?.title}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{bor?.book?.isbn}</TableCell>
